@@ -1,5 +1,7 @@
 import React, { ReactElement, ReactNode, useState } from "react"
 
+const uniq = (item, index, items) => items.indexOf(item) === index
+
 export default function IndexPage() {
   const [css, setCSS] = useState("")
 
@@ -23,6 +25,17 @@ export default function IndexPage() {
       }),
       {},
     )
+  const colorToName = Object.keys(namedColors).reduce((acc, name) => ({ ...acc, [namedColors[name]]: name }), {})
+
+  const textStyles = css
+    .split(/\n\n/)
+    .filter(it => /font-size/.test(it))
+    .filter(uniq)
+
+  const fontSizes = css
+    .split(/\n|;/)
+    .filter(it => /font-size/.test(it))
+    .filter(uniq)
 
   return (
     <div className="flex min-h-screen columns">
@@ -34,6 +47,9 @@ export default function IndexPage() {
       />
       <main className="w-5/6">
         <pre className="font-mono">{JSON.stringify(namedColors, null, 2)}</pre>
+        <pre className="font-mono">{JSON.stringify(colorToName, null, 2)}</pre>
+        <pre className="font-mono">{JSON.stringify(fontSizes, null, 2)}</pre>
+        <pre className="font-mono">{JSON.stringify(textStyles, null, 2)}</pre>
         {/* <ParseCSS css={css} render={({ name }) => <div>{name}</div>} /> */}
         {/* <ParseCSS css={css} render={({ name, colors }) => <div>{colors}</div>} /> */}
       </main>
