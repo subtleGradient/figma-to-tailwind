@@ -3,7 +3,7 @@ import React, { FC, ReactElement, ReactNode, useState } from "react";
 const titleCase = (it: string) =>
   String(it)
     .replace(/^([a-z])/gi, (_, it) => it.toLowerCase())
-    .replace(/-([a-z])/g, (_, it) => it.toUpperCase());
+    .replace(/(?:-|\s)([a-z])/gi, (_, it) => it.toUpperCase());
 
 const uniq = (item, index, items) => items.indexOf(item) === index;
 
@@ -117,7 +117,12 @@ function Layer2({
       )} = ${JSON.stringify(name)}, ...props }) => {
         return <>
           <div className=${JSON.stringify(className)}>{${titleCase(name)}}</div>
-          <div style={${titleCase(JSON.stringify(style))}}>{children}</div>
+          <div style={${JSON.stringify(
+            Object.keys(style).reduce(
+              (acc, key) => ({ ...acc, [titleCase(key)]: style[key] }),
+              {}
+            )
+          )}}>{children}</div>
         </>
       }`}
     </pre>
