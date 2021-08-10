@@ -7,10 +7,6 @@ const titleCase = (it: string) =>
 
 const uniq = (item, index, items) => items.indexOf(item) === index;
 
-function fontFamilyToTailwindFontName(fontFamily: string) {
-  return String(fontFamily).replace(/\s/g, "");
-}
-
 const defaultStyles = {
   "align-items": undefined,
   "backdrop-filter": undefined,
@@ -70,29 +66,49 @@ function Layer2({
   index,
   name,
   colorToName,
-  style
+  style,
+  alt = []
 }: {
   index: number;
   name: string;
   colorToName: {};
   style: ReturnType<typeof cssToStyles>;
+  alt?: {
+    name: string;
+    style: ReturnType<typeof cssToStyles>;
+  }[];
 } & JSX.IntrinsicElements["div"]): ReactElement {
   const className = [
     `bg-${colorToName[style.background]}`,
     `text-${colorToName[style.color]}`,
-    `font-${fontFamilyToTailwindFontName(style["font-family"])}`,
+    `font-${titleCase(style["font-family"])}`,
     `text-${styleToTextSize(style)}`,
-    ""
+    "",
+    ...alt.map(({ style: altStyle }, index) => [
+      colorToName[altStyle.background] === colorToName[style.background]
+        ? ""
+        : `alt${index}:bg-${colorToName[altStyle.background]}`,
+      colorToName[altStyle.color] === colorToName[style.color]
+        ? ""
+        : `alt${index}:text-${colorToName[altStyle.color]}`,
+      titleCase(altStyle["font-family"]) === titleCase(style["font-family"])
+        ? ""
+        : `alt${index}:font-${titleCase(altStyle["font-family"])}`,
+      styleToTextSize(altStyle) === styleToTextSize(style)
+        ? ""
+        : `alt${index}:text-${styleToTextSize(altStyle)}`,
+      ""
+    ])
   ]
+    .flat()
     .join(" ")
+    .replace(/\s+/g, " ")
     .trim();
   return (
     <pre className="font-mono" style={{ fontSize: 9, marginBottom: 8 }}>
       {`
       <MyAwesomeTextView${index} ${titleCase(name)}=${JSON.stringify(name)} />
-      <MyAwesomeTextView${index}>{${JSON.stringify(
-        name
-      )}}</MyAwesomeTextView${index}>
+      <MyAwesomeTextView${index}>${name}</MyAwesomeTextView${index}>
 
       const MyAwesomeTextView${index}: FC<{ ${titleCase(
         name
@@ -110,6 +126,7 @@ function Layer2({
 
 export default function IndexPage() {
   const [css, setCSS] = useState("");
+  const [css2, setCSS2] = useState("");
 
   const colors = css
     .split(/\n\n/)
@@ -155,32 +172,34 @@ export default function IndexPage() {
     styles.some((it) => /font/.test(it))
   );
 
-  const layers2 = css
-    .replace(/\n\n\/\* Inside Auto Layout \*\/\n/g, "")
-    .replace(/\/\* identical to box height, or \d+% \*\/\n+/g, "")
-    .split(/(?=\/\*.*?\*\/\n\n)/g)
-    .map((it) => it.split(/^\/\*\s+(.*?)\s+\*\/\n\n/g))
-    .map(([, name, styles]) => ({ name, style: cssToStyles(styles || "") }));
+  const layers2 = figmaCSSToLayers(css);
+  const layers22 = figmaCSSToLayers(css2);
+  const getLayersByName = (name: string) => {
+    return layers22.filter((it) => it.name === name);
+  };
 
-  const fontFamilies = layers2.reduce(
+  const fontFamilies = [...layers2, ...layers22].reduce(
     (acc, { name, style: { "font-family": fontFamily } }) => ({
       ...acc,
-      [fontFamilyToTailwindFontName(fontFamily)]: [fontFamily]
+      [titleCase(fontFamily)]: [fontFamily]
     }),
     {}
   );
 
-  const fontSizes2 = layers2.reduce((acc, { name, style }) => {
-    const {
-      "font-size": fontSize,
-      "line-height": lineHeight,
-      "letter-spacing": letterSpacing
-    } = style;
-    return {
-      ...acc,
-      [styleToTextSize(style)]: [fontSize, { letterSpacing, lineHeight }]
-    };
-  }, {});
+  const fontSizes2 = [...layers2, ...layers22].reduce(
+    (acc, { name, style }) => {
+      const {
+        "font-size": fontSize,
+        "line-height": lineHeight,
+        "letter-spacing": letterSpacing
+      } = style;
+      return {
+        ...acc,
+        [styleToTextSize(style)]: [fontSize, { letterSpacing, lineHeight }]
+      };
+    },
+    {}
+  );
 
   const twTheme = {
     colors: {
@@ -191,24 +210,36 @@ export default function IndexPage() {
     fontSize: { ...fontSizes2 }
   };
   return (
-    <div className="flex min-h-screen columns">
-      <textarea
-        className="flex-auto font-mono text-xs bg-gray-200"
-        placeholder="Paste some Figma CSS here"
-        value={css}
-        onChange={(e) => setCSS(e.target.value)}
-      />
-      <main className="w-5/6">
-        <pre className="font-mono">{JSON.stringify(twTheme, null, 2)}</pre>
-        <hr />
+    <div className="flex h-screen">
+      <aside className="flex flex-col">
+        <textarea
+          className="flex-1 font-mono text-xs bg-gray-200"
+          placeholder="Paste some Figma CSS here"
+          value={css}
+          onChange={(e) => setCSS(e.target.value)}
+        />
+        <textarea
+          className="flex-1 font-mono text-xs bg-gray-400 text-white placeholder-black"
+          placeholder="Paste some Figma CSS here"
+          value={css2}
+          onChange={(e) => setCSS2(e.target.value)}
+        />
+      </aside>
+      <main className="w-5/6 overflow-y-scroll">
+        <h1 className="text-lg">
+          Down here you'll see some code you can copy & paste
+        </h1>
+        <p>You'll want to rename a bunch of stuff.</p>
         <div className="font-mono">
           {layers2.map(({ name, style }, index) => (
-            <Layer2 key={index} {...{ index, name, colorToName, style }} />
+            <Layer2
+              key={index}
+              {...{ index, name, colorToName, style }}
+              alt={getLayersByName(name)}
+            />
           ))}
         </div>
-        {/* <pre className="font-mono">{JSON.stringify(textLayers, null, 2)}</pre> */}
-        {/* <ParseCSS css={css} render={({ name }) => <div>{name}</div>} /> */}
-        {/* <ParseCSS css={css} render={({ name, colors }) => <div>{colors}</div>} /> */}
+
         <hr />
         <pre className="font-mono text-xs">{`
 // tailwind.config.js
@@ -309,4 +340,12 @@ function safeArea(){
       </main>
     </div>
   );
+}
+function figmaCSSToLayers(css: string) {
+  return css
+    .replace(/\n\n\/\* Inside Auto Layout \*\/\n/g, "")
+    .replace(/\/\* identical to box height, or \d+% \*\/\n+/g, "")
+    .split(/(?=\/\*.*?\*\/\n\n)/g)
+    .map((it) => it.split(/^\/\*\s+(.*?)\s+\*\/\n\n/g))
+    .map(([, name, styles]) => ({ name, style: cssToStyles(styles || "") }));
 }
