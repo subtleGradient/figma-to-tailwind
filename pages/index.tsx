@@ -2,11 +2,12 @@ import React, { FC, ReactElement, ReactNode, useState } from "react";
 
 const titleCase = (it: string) =>
   String(it)
-    .replace(/^([a-z])/gi, (_, it) => it.toLowerCase())
-    .replace(/(?:-|\s)([a-z])/gi, (_, it) => it.toUpperCase());
+    .replace(/(?:[^a-z0-9_$])([a-z])/gi, (_, it) => it.toUpperCase())
+    .replace(/[^a-z0-9_$]/gi, "")
+    .replace(/^([a-z])/gi, (_, it) => it.toLowerCase());
 
 function titleCaseKeys(
-  style: ReturnType<typeof cssToStyles> & React.CSSProperties
+  style: ReturnType<typeof cssToStyles>
 ): React.CSSProperties {
   return Object.keys(style).reduce(
     (acc, key) => ({ ...acc, [titleCase(key)]: style[key] }),
@@ -56,12 +57,15 @@ const defaultStyles = {
 };
 const cssToStyles = (
   css: string
-): typeof defaultStyles & { [key: string]: string } =>
-  css
+): typeof defaultStyles & { [key: string]: string } & React.CSSProperties => {
+  const style: any = css
     .split(/(?:\n|;)+/)
     .filter(Boolean)
     .map((it) => it.split(/:\s*/))
     .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), defaultStyles);
+
+  return { ...style, ...titleCaseKeys(style) };
+};
 
 function styleToTextSize({
   "font-size": fontSize,
@@ -92,26 +96,33 @@ function Layer2({
     `text-${colorToName[style.color]}`,
     `font-${titleCase(style["font-family"])}`,
     `text-${styleToTextSize(style)}`,
+    `text-[${style.fontSize},${style.lineHeight},${style.letterSpacing}]`,
     "",
-    ...alt.map(({ style: altStyle }, index) => [
-      colorToName[altStyle.background] === colorToName[style.background]
-        ? ""
-        : `alt${index}:bg-${colorToName[altStyle.background]}`,
-      colorToName[altStyle.color] === colorToName[style.color]
-        ? ""
-        : `alt${index}:text-${colorToName[altStyle.color]}`,
-      titleCase(altStyle["font-family"]) === titleCase(style["font-family"])
-        ? ""
-        : `alt${index}:font-${titleCase(altStyle["font-family"])}`,
-      styleToTextSize(altStyle) === styleToTextSize(style)
-        ? ""
-        : `alt${index}:text-${styleToTextSize(altStyle)}`,
-      ""
-    ])
+    ...alt.map(({ style: altStyle }, index) =>
+      [
+        colorToName[altStyle.background] !== colorToName[style.background] &&
+          `alt${index}:bg-${colorToName[altStyle.background]}`,
+
+        colorToName[altStyle.color] !== colorToName[style.color] &&
+          `alt${index}:text-${colorToName[altStyle.color]}`,
+
+        titleCase(altStyle["font-family"]) !==
+          titleCase(style["font-family"]) &&
+          `alt${index}:font-${titleCase(altStyle["font-family"])}`,
+
+        styleToTextSize(altStyle) !== styleToTextSize(style) &&
+          `alt${index}:text-${styleToTextSize(altStyle)}`,
+
+        `alt${index}:text-[${altStyle.fontSize},${altStyle.lineHeight},${altStyle.letterSpacing}]`,
+        ""
+      ].filter(Boolean)
+    )
   ]
     .flat()
     .join(" ")
     .replace(/\s+/g, " ")
+    .replace(/,undefined/g, "")
+    .replace(/alt0:/g, "mobile:")
     .trim();
   return (
     <pre className="font-mono" style={{ fontSize: 9, marginBottom: 8 }}>
@@ -125,14 +136,17 @@ function Layer2({
         name
       )} = ${JSON.stringify(name)}, ...props }) => {
         return <>
+          <div className=${JSON.stringify(className)}>${name}</div>
           <div className=${JSON.stringify(className)}>{${titleCase(name)}}</div>
           <div style={${JSON.stringify(titleCaseKeys(style))}}>{children}</div>
-          ${alt.map(
-            ({ style }) =>
-              `<div style={${JSON.stringify(
-                titleCaseKeys(style)
-              )}}>{children}</div>`
-          )}
+          ${alt
+            .map(
+              ({ style }) =>
+                `<div style={${JSON.stringify(
+                  titleCaseKeys(style)
+                )}}>{children}</div>`
+            )
+            .join("\n          ")}
         </>
       }`}
     </pre>
@@ -210,7 +224,10 @@ export default function IndexPage() {
       } = style;
       return {
         ...acc,
-        [styleToTextSize(style)]: [fontSize, { letterSpacing, lineHeight }]
+        [styleToTextSize(style)]: [
+          fontSize,
+          letterSpacing ? { letterSpacing, lineHeight } : lineHeight
+        ]
       };
     },
     {}
