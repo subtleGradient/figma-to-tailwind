@@ -5,6 +5,15 @@ const titleCase = (it: string) =>
     .replace(/^([a-z])/gi, (_, it) => it.toLowerCase())
     .replace(/(?:-|\s)([a-z])/gi, (_, it) => it.toUpperCase());
 
+function titleCaseKeys(
+  style: ReturnType<typeof cssToStyles> & React.CSSProperties
+): any {
+  return Object.keys(style).reduce(
+    (acc, key) => ({ ...acc, [titleCase(key)]: style[key] }),
+    {}
+  );
+}
+
 const uniq = (item, index, items) => items.indexOf(item) === index;
 
 const defaultStyles = {
@@ -117,12 +126,13 @@ function Layer2({
       )} = ${JSON.stringify(name)}, ...props }) => {
         return <>
           <div className=${JSON.stringify(className)}>{${titleCase(name)}}</div>
-          <div style={${JSON.stringify(
-            Object.keys(style).reduce(
-              (acc, key) => ({ ...acc, [titleCase(key)]: style[key] }),
-              {}
-            )
-          )}}>{children}</div>
+          <div style={${JSON.stringify(titleCaseKeys(style))}}>{children}</div>
+          ${alt.map(
+            ({ style }) =>
+              `<div style={${JSON.stringify(
+                titleCaseKeys(style)
+              )}}>{children}</div>`
+          )}
         </>
       }`}
     </pre>
