@@ -94,9 +94,10 @@ function Layer2({
   const className = [
     `bg-${colorToName[style.background]}`,
     `text-${colorToName[style.color]}`,
-    `font-${titleCase(style["font-family"])}`,
-    `text-${styleToTextSize(style)}`,
-    `text-[${style.fontSize},${style.lineHeight},${style.letterSpacing}]`,
+    // `font-${titleCase(style["font-family"])}`,
+    // `text-${styleToTextSize(style)}`,
+    `text-[${style.fontSize}]`,
+    `leading-[${style.lineHeight}]`,
     "",
     ...alt.map(({ style: altStyle }, index) =>
       [
@@ -106,14 +107,18 @@ function Layer2({
         colorToName[altStyle.color] !== colorToName[style.color] &&
           `alt${index}:text-${colorToName[altStyle.color]}`,
 
-        titleCase(altStyle["font-family"]) !==
-          titleCase(style["font-family"]) &&
-          `alt${index}:font-${titleCase(altStyle["font-family"])}`,
+        // titleCase(altStyle["font-family"]) !==
+        //   titleCase(style["font-family"]) &&
+        //   `alt${index}:font-${titleCase(altStyle["font-family"])}`,
 
-        styleToTextSize(altStyle) !== styleToTextSize(style) &&
-          `alt${index}:text-${styleToTextSize(altStyle)}`,
+        // styleToTextSize(altStyle) !== styleToTextSize(style) &&
+        //   `alt${index}:text-${styleToTextSize(altStyle)}`,
 
-        `alt${index}:text-[${altStyle.fontSize},${altStyle.lineHeight},${altStyle.letterSpacing}]`,
+        style.fontSize !== altStyle.fontSize &&
+          `alt${index}:text-[${style.fontSize}]`,
+
+        style.lineHeight !== altStyle.lineHeight &&
+          `alt${index}:leading-[${style.lineHeight}]`,
         ""
       ].filter(Boolean)
     )
