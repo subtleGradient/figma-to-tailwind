@@ -7,7 +7,7 @@ const titleCase = (it: string) =>
 
 function titleCaseKeys(
   style: ReturnType<typeof cssToStyles> & React.CSSProperties
-): any {
+): React.CSSProperties {
   return Object.keys(style).reduce(
     (acc, key) => ({ ...acc, [titleCase(key)]: style[key] }),
     {}
